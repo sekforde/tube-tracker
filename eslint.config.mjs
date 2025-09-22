@@ -19,7 +19,14 @@ const eslintConfig = [
       "build/**",
       "next-env.d.ts",
     ],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-unused-vars": ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      "jsx-a11y/role-has-required-aria-props": "off",
+      "@next/next/no-img-element": "off"
+    }
   },
 ];
 
 export default eslintConfig;
+

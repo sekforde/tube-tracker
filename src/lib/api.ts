@@ -8,7 +8,6 @@ export async function get(pathname:string, searchParams: URLSearchParams = new U
 
     url.search = searchParams.toString()
     
-    // const url = `/Line/${line}/Arrivals?stopPointId=${station}${p.toString() ? '&' + p : ''}`
     const res = await fetch(url.toString())
     if (!res.ok) {
         console.log(res)
