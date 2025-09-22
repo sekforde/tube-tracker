@@ -55,6 +55,55 @@ export async function loadArrivals(line:string, station:string) {
     return rows
 }
 
+export async function loadArrivalsByPlatform(line:string, station:string) {
+    const data = await getArrivals(line, station)
+    // console.log(data)
+    data.sort((a: any, b: any) => a.timeToStation - b.timeToStation)
+
+    // Group arrivals by platform
+    const platformGroups: { [key: string]: any[] } = {}
+    
+    data.forEach((item: any) => {
+        const platformName = item.platformName || 'Unknown Platform'
+        if (!platformGroups[platformName]) {
+            platformGroups[platformName] = []
+        }
+        platformGroups[platformName].push(item)
+    })
+
+    // Convert each platform group to display format and sort by platform number
+    const platformBoards = Object.entries(platformGroups)
+        .map(([platformName, arrivals]) => {
+            let stationName = ''
+            const rows = arrivals.slice(0, 8).map((item: any) => {
+                stationName = item.stationName.replace("Underground Station","")
+                const mins = Math.max(0, Math.round(item.timeToStation / 60))
+                const due = mins <= 0 ? 'Due' : `${mins} min`
+                return {
+                    due,
+                    dest: (item.destinationName || item.towards || item.towards).replace("Underground Station",""),
+                    via: item.platformName?.replace(/.*-\s*/, '') || item.towards || '',
+                    plat: (item.platformName || '').match(/Platform\s(\d+)/)?.[1] || '',
+                    status: item.modeName === 'tube' ? 'Good Service' : ''
+                }
+            })
+
+            // Extract platform number for sorting
+            const platformNumber = parseInt(platformName.match(/Platform\s(\d+)/)?.[1] || '999')
+            
+            return {
+                stationName,
+                platformName,
+                platformNumber,
+                arrivals: rows
+            }
+        })
+        .sort((a, b) => a.platformNumber - b.platformNumber)
+        .map(({ stationName, platformName, arrivals }) => ({ stationName, platformName, arrivals }))
+
+    return platformBoards
+}
+
 export async function revalidateArrivals(line: string, station: string) {
     revalidatePath(`/${line}/${station}`)
 }

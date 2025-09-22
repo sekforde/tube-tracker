@@ -14,30 +14,52 @@
   --orange:#ff9f43;        /* delays */
   --red:#ff6b6b;           /* severe */
 }
-html,body{height:100%}
+html,body{
+  /* height:100% */
+  background: black
+}
 body{
-  margin:0; background:radial-gradient(1200px 800px at 50% -10%, #161925 0%, #0b0d13 55%, #060709 100%);
+  margin:0; 
+  /* background:radial-gradient(1200px 800px at 50% -10%, #161925 0%, #0b0d13 55%, #060709 100%); */
+  /* background:#161925; */
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   color:var(--text); display:grid; place-items:center; padding:12px;
-  min-height: 100vh;
+  /* min-height: 100vh; */
 }
 
 .frame{
   width:min(1200px, 98vw);
   max-width: 100%;
+  /* background:linear-gradient(180deg, #0f1117 0%, #0a0c12 100%); */
+  border-radius:22px; padding:18px; box-shadow:0 20px 60px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.03);
+  border:1px solid var(--trim);
+  /* min-height: calc(100vh - 24px); */
+  display: flex;
+  flex-direction: column;
+}
+
+.display-board {
+  width: 100%;
   background:linear-gradient(180deg, #0f1117 0%, #0a0c12 100%);
   border-radius:22px; padding:18px; box-shadow:0 20px 60px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.03);
   border:1px solid var(--trim);
-  min-height: calc(100vh - 24px);
   display: flex;
   flex-direction: column;
+  margin-bottom: 20px;
+}
+
+.display-board:last-child {
+  margin-bottom: 0;
 }
 
 .topbar{
   display:flex; align-items:center; gap:12px; margin-bottom:14px;
 }
 .pill{
-  background:var(--accent); color:white; font-weight:700; letter-spacing:.08em;
+  /* background:var(--accent);  */
+  color:white; 
+  font-weight:700; 
+  letter-spacing:.08em;
   padding:8px 12px; border-radius:999px; text-transform:uppercase; font-size:12px;
   box-shadow:0 0 18px rgba(228,0,43,.25);
 }
@@ -88,7 +110,10 @@ body{
   .frame {
     width: 98vw;
     padding: 16px;
-    min-height: calc(100vh - 24px);
+    /* min-height: calc(100vh - 24px); */
+  }
+  .display-board {
+    padding: 16px;
   }
   .row { 
     grid-template-columns: 80px 1fr 100px 70px 130px; 
@@ -105,7 +130,12 @@ body{
     width: 100vw;
     padding: 12px;
     border-radius: 16px;
-    min-height: calc(100vh - 16px);
+    /* min-height: calc(100vh - 16px); */
+  }
+  .display-board {
+    padding: 12px;
+    border-radius: 16px;
+    margin-bottom: 16px;
   }
   .topbar {
     gap: 8px;
@@ -138,7 +168,12 @@ body{
     width: 100vw;
     padding: 8px;
     border-radius: 12px;
-    min-height: calc(100vh - 8px);
+    /* min-height: calc(100vh - 8px); */
+  }
+  .display-board {
+    padding: 8px;
+    border-radius: 12px;
+    margin-bottom: 12px;
   }
   .topbar {
     gap: 6px;
@@ -159,5 +194,231 @@ body{
   .badge {
     font-size: 11px;
     padding: 1px 6px;
+  }
+}
+
+/* TfL Style Back Button */
+.back-button {
+  position: relative;
+  background: var(--panel);
+  border: 2px solid var(--trim);
+  border-radius: 50%;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.4),
+    inset 0 1px 2px rgba(255, 255, 255, 0.1);
+  margin-bottom: 20px;
+  align-self: flex-start;
+}
+
+.back-button:hover {
+  border-color: var(--accent);
+  box-shadow: 
+    0 6px 20px rgba(228, 0, 43, 0.3),
+    0 0 20px rgba(228, 0, 43, 0.2),
+    inset 0 1px 2px rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
+}
+
+.back-button:active {
+  transform: translateY(0);
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.4),
+    inset 0 1px 2px rgba(255, 255, 255, 0.1);
+}
+
+.back-button-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+
+.back-arrow {
+  width: 20px;
+  height: 20px;
+  color: var(--led);
+  filter: drop-shadow(0 0 4px rgba(255, 191, 0, 0.4));
+  transition: all 0.3s ease;
+}
+
+.back-button:hover .back-arrow {
+  color: var(--accent);
+  filter: drop-shadow(0 0 8px rgba(228, 0, 43, 0.6));
+}
+
+.back-text {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--led);
+  text-shadow:
+    0 0 3px rgba(255, 191, 0, 0.4),
+    0 0 6px rgba(255, 191, 0, 0.2);
+  transition: all 0.3s ease;
+}
+
+.back-button:hover .back-text {
+  color: var(--accent);
+  text-shadow:
+    0 0 6px rgba(228, 0, 43, 0.6),
+    0 0 12px rgba(228, 0, 43, 0.3);
+}
+
+/* Responsive back button */
+@media (max-width: 768px) {
+  .back-button {
+    width: 50px;
+    height: 50px;
+    margin-bottom: 16px;
+  }
+  
+  .back-arrow {
+    width: 16px;
+    height: 16px;
+  }
+  
+  .back-text {
+    font-size: 7px;
+  }
+}
+
+/* TfL Style Favorite Button */
+.favorite-button {
+  position: relative;
+  background: var(--panel);
+  border: 2px solid var(--trim);
+  border-radius: 50%;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: var(--text);
+}
+
+.favorite-button:hover {
+  border-color: var(--accent);
+  box-shadow: 
+    0 6px 20px rgba(228, 0, 43, 0.3),
+    0 0 20px rgba(228, 0, 43, 0.2),
+    inset 0 1px 2px rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
+}
+
+.favorite-button:active {
+  transform: translateY(0);
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.4),
+    inset 0 1px 2px rgba(255, 255, 255, 0.1);
+}
+
+.favorite-button.favorited {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.favorite-button.favorited:hover {
+  box-shadow: 
+    0 6px 20px rgba(228, 0, 43, 0.4),
+    0 0 20px rgba(228, 0, 43, 0.3),
+    inset 0 1px 2px rgba(255, 255, 255, 0.15);
+}
+
+.favorite-button-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+
+.favorite-icon {
+  width: 20px;
+  height: 20px;
+  color: inherit;
+  transition: all 0.2s ease;
+}
+
+.favorite-button:hover .favorite-icon {
+  color: var(--accent);
+  filter: drop-shadow(0 0 8px rgba(228, 0, 43, 0.6));
+}
+
+.favorite-text {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: inherit;
+  transition: all 0.2s ease;
+}
+
+.favorite-button:hover .favorite-text {
+  color: var(--accent);
+  text-shadow:
+    0 0 6px rgba(228, 0, 43, 0.6),
+    0 0 12px rgba(228, 0, 43, 0.3);
+}
+
+/* Responsive favorite button */
+@media (max-width: 768px) {
+  .favorite-button {
+    width: 50px;
+    height: 50px;
+  }
+  
+  .favorite-icon {
+    width: 16px;
+    height: 16px;
+  }
+  
+  .favorite-text {
+    font-size: 7px;
+  }
+}
+
+@media (max-width: 480px) {
+  .favorite-button {
+    width: 45px;
+    height: 45px;
+  }
+  
+  .favorite-icon {
+    width: 14px;
+    height: 14px;
+  }
+  
+  .favorite-text {
+    font-size: 6px;
+  }
+}
+
+@media (max-width: 480px) {
+  .back-button {
+    width: 45px;
+    height: 45px;
+    margin-bottom: 12px;
+  }
+  
+  .back-arrow {
+    width: 14px;
+    height: 14px;
+  }
+  
+  .back-text {
+    font-size: 6px;
   }
 }

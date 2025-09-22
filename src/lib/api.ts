@@ -21,6 +21,12 @@ export function getLines() {
     return get('/Line/Mode/tube')
 }
 
+export async function getLine(line: string) {
+    const data = await get(`/Line/${line}`)
+    if (data.length) return data[0]
+    return data
+}
+
 export function getStations(line: string) {
     return get(`/Line/${line}/StopPoints`)
 }
