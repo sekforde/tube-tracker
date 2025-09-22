@@ -27,11 +27,9 @@ export default async function StationPage({ params }: { params: Promise<any> }) 
                         key={`platform-${index}`}
                         lineId={line}
                         lineName={`${line.charAt(0).toUpperCase() + line.slice(1)} Line`}
-                        // stationName={station.replace(/-/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
                         stationName={board.stationName}
                         platformName={board.platformName}
                         arrivals={board.arrivals}
-                        showClock={index === 0} // Only show clock on first board
                     />
                 ))}
             </div>

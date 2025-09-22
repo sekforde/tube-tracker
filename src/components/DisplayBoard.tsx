@@ -14,7 +14,6 @@ interface DisplayBoardProps {
     stationName: string
     platformName?: string
     arrivals: ArrivalRow[]
-    showClock?: boolean
     lineId: string
 }
 
@@ -23,8 +22,7 @@ export default function DisplayBoard({
     lineId,
     stationName,
     platformName,
-    arrivals,
-    showClock = true
+    arrivals
 }: DisplayBoardProps) {
     const color = lineColors.find((l) => l.id === lineId)?.color ?? 'gray'
 
