@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Central Line — Wanstead Arrivals Board</title>
+  <style>
+    :root{
+      --bg:#0a0a0a;            /* deep black */
+      --panel:#111319;         /* panel body */
+      --trim:#1b1e27;          /* bezel */
+      --accent:#e4002b;        /* Central line red */
+      --led:#ffbf00;           /* amber LED */
+      --led-dim:#6b5200;       /* dim amber */
+      --text:#c9d1d9;          /* light grey */
+      --grid:#0e1016;          /* subtle grid */
+      --green:#6ee787;         /* good service */
+      --yellow:#ffde59;        /* minor */
+      --orange:#ff9f43;        /* delays */
+      --red:#ff6b6b;           /* severe */
+    }
+    html,body{height:100%}
+    body{
+      margin:0; background:radial-gradient(1200px 800px at 50% -10%, #161925 0%, #0b0d13 55%, #060709 100%);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      color:var(--text); display:grid; place-items:center; padding:24px;
+    }
+
+    .frame{
+      width:min(1000px, 95vw);
+      background:linear-gradient(180deg, #0f1117 0%, #0a0c12 100%);
+      border-radius:22px; padding:18px; box-shadow:0 20px 60px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.03);
+      border:1px solid var(--trim);
+    }
+
+    .topbar{
+      display:flex; align-items:center; gap:12px; margin-bottom:14px;
+    }
+    .pill{
+      background:var(--accent); color:white; font-weight:700; letter-spacing:.08em;
+      padding:8px 12px; border-radius:999px; text-transform:uppercase; font-size:12px;
+      box-shadow:0 0 18px rgba(228,0,43,.25);
+    }
+    .title{font-weight:700; letter-spacing:.06em; opacity:.9}
+    .now{margin-left:auto; font-variant-numeric:tabular-nums; opacity:.7}
+
+    .panel{
+      position:relative; border-radius:16px; overflow:hidden; background:
+        linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,0) 60%),
+        repeating-linear-gradient(0deg, var(--grid), var(--grid) 34px, #0b0d13 34px, #0b0d13 68px);
+      border:1px solid rgba(255,255,255,.06);
+      box-shadow: inset 0 2px 18px rgba(0,0,0,.6);
+    }
+
+    .row{ display:grid; grid-template-columns: 90px 1fr 110px 80px 140px; gap:12px; align-items:center; padding:12px 16px; }
+    .row + .row{ border-top:1px dashed rgba(255,255,255,.06); }
+
+    .hdr{ background:rgba(255,255,255,.03); font-weight:700; text-transform:uppercase; letter-spacing:.08em; font-size:12px; }
+
+    .cell{ font-variant-numeric: tabular-nums; }
+
+    .led{
+      color:var(--led);
+      text-shadow:
+        0 0 3px rgba(255,191,0,.35),
+        0 0 6px rgba(255,191,0,.25),
+        0 0 14px rgba(255,191,0,.15);
+    }
+    .led-dim{ color:var(--led-dim) }
+    .blink{ animation: blink 1.2s steps(1, end) infinite; }
+    @keyframes blink { 50% { opacity:.35 } }
+
+    .plat{ justify-self:center; min-width:3ch; text-align:center; }
+
+    .badge{ display:inline-grid; place-items:center; padding:2px 8px; border-radius:999px; font-weight:700; letter-spacing:.02em; font-size:12px; }
+    .good{ color:#071b0d; background:var(--green) }
+    .minor{ color:#302705; background:var(--yellow) }
+    .delays{ color:#2c1300; background:var(--orange) }
+    .severe{ color:white; background:var(--red) }
+
+    .footer{ display:flex; gap:12px; justify-content:space-between; align-items:center; padding:10px 2px; opacity:.75; font-size:12px }
+
+    /* Responsive tweak */
+    @media (max-width:720px){
+      .row{ grid-template-columns: 70px 1fr 80px 60px 120px; gap:8px; padding:10px 12px; }
+      .title{ font-size:14px }
+      .pill{ display:none }
+    }
+  </style>
+</head>
+<body>
+  <div class="frame" role="region" aria-label="Central line arrivals for Wanstead">
+    <div class="topbar">
+      <span class="pill">Central Line</span>
+      <div class="title">Wanstead — Arrivals</div>
+      <div class="now" id="clock" aria-live="polite">--:--</div>
+    </div>
+
+    <div class="panel" role="table" aria-label="Arrivals board">
+      <div class="row hdr" role="row">
+        <div class="cell" role="columnheader">Due</div>
+        <div class="cell" role="columnheader">Destination</div>
+        <div class="cell" role="columnheader">Towards</div>
+        <div class="cell plat" role="columnheader">Plat</div>
+        <div class="cell" role="columnheader">Status</div>
+      </div>
+
+      <!-- SAMPLE ROWS: replace dynamically with API data if desired -->
+      <div class="row" role="row">
+        <div class="cell led blink" role="cell">Due</div>
+        <div class="cell led" role="cell">Ealing Broadway</div>
+        <div class="cell led-dim" role="cell">Notting Hill Gt</div>
+        <div class="cell plat led" role="cell">1</div>
+        <div class="cell" role="cell"><span class="badge good">Good Service</span></div>
+      </div>
+
+      <div class="row" role="row">
+        <div class="cell led" role="cell">2 min</div>
+        <div class="cell led" role="cell">West Ruislip</div>
+        <div class="cell led-dim" role="cell">Leytonstone</div>
+        <div class="cell plat led" role="cell">1</div>
+        <div class="cell" role="cell"><span class="badge minor">Minor Delays</span></div>
+      </div>
+
+      <div class="row" role="row">
+        <div class="cell led" role="cell">5 min</div>
+        <div class="cell led" role="cell">Hainault (via Newbury Park)</div>
+        <div class="cell led-dim" role="cell">Redbridge</div>
+        <div class="cell plat led" role="cell">2</div>
+        <div class="cell" role="cell"><span class="badge delays">Part Suspended</span></div>
+      </div>
+
+      <div class="row" role="row">
+        <div class="cell led" role="cell">8 min</div>
+        <div class="cell led" role="cell">Epping</div>
+        <div class="cell led-dim" role="cell">Snaresbrook</div>
+        <div class="cell plat led" role="cell">2</div>
+        <div class="cell" role="cell"><span class="badge severe">Severe Delays</span></div>
+      </div>
+    </div>
+
+    <div class="footer" aria-hidden="true">
+      <span>LED simulation: amber glow + tabular numerals</span>
+      <span>Mock data shown — hook up to TfL API to go live</span>
+    </div>
+  </div>
+
+  <script>
+    // Clock
+    const clockEl = document.getElementById('clock');
+    const pad = n => String(n).padStart(2, '0');
+    function tick(){
+      const d = new Date();
+      clockEl.textContent = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+    tick(); setInterval(tick, 10000);
+
+    /* OPTIONAL: Hook up to TfL Unified API
+       Uncomment and replace APP_ID/APP_KEY or remove params for unauthenticated.
+       This will replace sample rows with live arrivals for Wanstead (Central line).
+    */
+    const STOPPOINT_ID = '940GZZLUWSD';
+    const LINE_ID = 'central';
+    const APP_ID = '';   // optional
+    const APP_KEY = '';  // optional
+
+    async function loadArrivals(){
+      const p = new URLSearchParams();
+      if(APP_ID && APP_KEY){ p.set('app_id', APP_ID); p.set('app_key', APP_KEY); }
+
+      const url = `https://api.tfl.gov.uk/Line/${LINE_ID}/Arrivals?stopPointId=${STOPPOINT_ID}${p.toString()?'&'+p:''}`;
+      const res = await fetch(url);
+      if(!res.ok) throw new Error('TfL error '+res.status);
+      const data = await res.json();
+      data.sort((a,b)=>a.timeToStation - b.timeToStation);
+
+      const rows = data.slice(0, 10).map(item => {
+        const mins = Math.max(0, Math.round(item.timeToStation/60));
+        const due = mins <= 0 ? 'Due' : `${mins} min`;
+        return {
+          due,
+          dest: item.destinationName || item.towards || item.towards,
+          via: item.platformName?.replace(/.*-\s*/,'') || item.towards || '',
+          plat: (item.platformName||'').match(/Platform\s(\d+)/)?.[1] || '',
+          status: item.modeName === 'tube' ? 'Good Service' : ''
+        };
+      });
+
+      renderRows(rows);
+    }
+
+    function renderRows(rows){
+      const panel = document.querySelector('.panel');
+      const header = panel.firstElementChild; // keep header
+      panel.innerHTML = '';
+      panel.appendChild(header.cloneNode(true));
+
+      rows.forEach(r => {
+        const row = document.createElement('div');
+        row.className = 'row';
+        row.innerHTML = `
+          <div class="cell led ${r.due==='Due'?'blink':''}">${r.due}</div>
+          <div class="cell led">${r.dest}</div>
+          <div class="cell led-dim">${r.via}</div>
+          <div class="cell plat led">${r.plat}</div>
+          <div class="cell"><span class="badge good">Good Service</span></div>`;
+        panel.appendChild(row);
+      });
+    }
+
+    // loadArrivals(); // uncomment to enable live data
+  </script>
+</body>
+</html>
