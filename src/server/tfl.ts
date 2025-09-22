@@ -1,8 +1,7 @@
 'use server'
 
 import { getArrivals } from '@/lib/api'
-
-// const APP_KEY = process.env.APP_KEY ?? ''
+import { revalidatePath } from 'next/cache'
 
 // const example = {
 //     $type: 'Tfl.Api.Presentation.Entities.Prediction, Tfl.Api.Presentation.Entities',
@@ -37,13 +36,6 @@ import { getArrivals } from '@/lib/api'
 // }
 
 export async function loadArrivals(line:string, station:string) {
-    // const p = new URLSearchParams()
-    // p.set('app_key', APP_KEY)
-
-    // const url = `https://api.tfl.gov.uk/Line/${line}/Arrivals?stopPointId=${station}${p.toString() ? '&' + p : ''}`
-    // const res = await fetch(url)
-    // if (!res.ok) throw new Error('TfL error ' + res.status)
-    // const data = await res.json()
     const data = await getArrivals(line, station)
     data.sort((a: any, b: any) => a.timeToStation - b.timeToStation)
 
@@ -61,4 +53,8 @@ export async function loadArrivals(line:string, station:string) {
     })
 
     return rows
+}
+
+export async function revalidateArrivals(line: string, station: string) {
+    revalidatePath(`/${line}/${station}`)
 }

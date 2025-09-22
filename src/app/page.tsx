@@ -2,7 +2,6 @@ import { getLines } from '@/lib/api'
 
 export default async function Home() {
     const lines = await getLines()
-    // console.log(lines)
     return (
         <div className="block">
             {lines.map((line: any) => {

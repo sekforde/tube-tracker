@@ -1,4 +1,5 @@
 import { loadArrivals } from '@/server/tfl'
+import AutoRefreshTimer from '@/components/AutoRefreshTimer'
 
 export default async function StationPage({ params }: { params: Promise<any> }) {
     const resolvedParams = await params
@@ -6,7 +7,9 @@ export default async function StationPage({ params }: { params: Promise<any> }) 
     const rows = await loadArrivals(line, station)
 
     return (
-        <div className="frame" role="region" aria-label="Central line arrivals for Wanstead">
+        <>
+            <AutoRefreshTimer line={line} station={station} />
+            <div className="frame" role="region" aria-label="Central line arrivals for Wanstead">
             <div className="topbar">
                 <span className="pill">Central Line</span>
                 <div className="title">Wanstead — Arrivals</div>
@@ -61,6 +64,7 @@ export default async function StationPage({ params }: { params: Promise<any> }) 
                 <span>LED simulation: amber glow + tabular numerals</span>
                 <span>Mock data shown — hook up to TfL API to go live</span>
             </div> */}
-        </div>
+            </div>
+        </>
     )
 }
