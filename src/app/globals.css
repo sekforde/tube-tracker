@@ -306,6 +306,7 @@ body{
   cursor: pointer;
   transition: all 0.2s ease;
   color: var(--text);
+  margin-bottom: 20px;
 }
 
 .favorite-button:hover {
