@@ -43,28 +43,20 @@ export default function DisplayBoard({
                 </div>
             </div>
 
-            <div className="w-full p-2">
+            <div className="w-full">
                 <table className="w-full">
                     <thead>
                         <tr className="text-left">
-                            <th className="py-2 ">Due</th>
                             <th className="py-2 px-2">Destination</th>
-                            <th className="py-2 px-2" colSpan={2}>
-                                Platform
-                            </th>
-                            {/* <th className="py-2">Status</th> */}
+                            <th className="py-2 text-right">Due</th>
                         </tr>
                     </thead>
                     <tbody>
                         {arrivals.map((row: ArrivalRow, rowIndex: number) => {
                             return (
                                 <tr className="py-2" key={`row-${rowIndex}`}>
-                                    <td className="led py-1 whitespace-nowrap">{row.due}</td>
                                     <td className="led py-1 px-2">{row.dest}</td>
-                                    <td className="led py-1 px-2">{row.plat}</td>
-                                    {/* <td className="led py-1">
-                                        <span className="badge good whitespace-nowrap">{row.status}</span>
-                                    </td> */}
+                                    <td className="led py-1 whitespace-nowrap text-right">{row.due}</td>
                                 </tr>
                             )
                         })}
@@ -72,7 +64,9 @@ export default function DisplayBoard({
                     <tfoot>
                         <tr className="">
                             <td colSpan={3}>
+                                <div className="p-2 justify-center items-center flex">
                                 <Clock />
+                                </div>
                             </td>
                         </tr>
                     </tfoot>
