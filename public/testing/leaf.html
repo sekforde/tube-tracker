@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <title>TfL Tube Line Map – Branches (Central Line)</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <!-- Leaflet CSS -->
+        <link
+            rel="stylesheet"
+            href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+            integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+            crossorigin="anonymous"
+        />
+        <style>
+            html,
+            body {
+                height: 100%;
+                margin: 0;
+            }
+            #map {
+                height: 100%;
+            }
+            .legend {
+                position: absolute;
+                bottom: 12px;
+                left: 12px;
+                background: #fff;
+                border-radius: 8px;
+                padding: 8px 10px;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+                font: 13px/1.3 system-ui, sans-serif;
+                max-width: 260px;
+            }
+            .legend div {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin: 4px 0;
+            }
+            .swatch {
+                width: 16px;
+                height: 3px;
+                background: #000;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="map"></div>
+        <div class="legend" id="legend"><strong>Central line branches</strong></div>
+
+        <!-- Leaflet JS -->
+        <script
+            src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+            crossorigin="anonymous"
+        ></script>
+        <script>
+            // --- Config ---
+            const LINE_ID = 'central' // change to: "district", "northern", etc.
+            const BRAND_COLOR = '#E32017' // Central line brand red
+            const APP_ID = '' // optional
+            const APP_KEY = '' // optional
+
+            // Slightly vary branch colours around the brand color
+            function branchColor(i) {
+                const colors = [BRAND_COLOR, '#c91c14', '#ff3a2e', '#a11411', '#ff6a5e', '#7f100e', '#ff8c82']
+                return colors[i % colors.length]
+            }
+
+            // Build query param string with app creds if provided
+            function authQS() {
+                const qs = new URLSearchParams()
+                if (APP_ID && APP_KEY) {
+                    qs.set('app_id', APP_ID)
+                    qs.set('app_key', APP_KEY)
+                }
+                const s = qs.toString()
+                return s ? '?' + s : ''
+            }
+
+            // Fetch route sequence for a line + direction
+            async function fetchRouteSequence(lineId, direction) {
+                const url = `https://api.tfl.gov.uk/Line/${lineId}/Route/Sequence/${direction}${authQS()}`
+                const res = await fetch(url, { cache: 'no-store' })
+                if (!res.ok) throw new Error(`TfL error ${res.status} ${res.statusText}`)
+                return res.json()
+            }
+
+            // Extract a StopPoint lookup { naptanId -> {lat, lon, name} }
+            function buildStopLookup(routeSeq) {
+                const lookup = {}
+                // Prefer stopPointSequences[].stopPoints (has many) and stations[]
+                const fromSeqs = (routeSeq.stopPointSequences || []).flatMap((s) => s.stopPoints || [])
+                const fromStations = routeSeq.stations || []
+                ;[...fromSeqs, ...fromStations].forEach((sp) => {
+                    if (!lookup[sp.id]) {
+                        lookup[sp.id] = {
+                            id: sp.id,
+                            lat: sp.lat,
+                            lon: sp.lon,
+                            name: sp.commonName || sp.name || sp.id
+                        }
+                    }
+                })
+                return lookup
+            }
+
+            // Convert orderedLineRoutes to polylines using a lookup
+            function buildBranchPolylines(routeSeq, lookup) {
+                const routes = routeSeq.orderedLineRoutes || []
+                return routes
+                    .map((r) => {
+                        const coords = (r.naptanIds || [])
+                            .map((id) => lookup[id])
+                            .filter(Boolean)
+                            .map((sp) => [sp.lat, sp.lon])
+                        return {
+                            name: r.name || 'Branch',
+                            naptanIds: r.naptanIds || [],
+                            coords
+                        }
+                    })
+                    .filter((b) => b.coords.length >= 2)
+            }
+
+            // Merge two sequences (inbound/outbound) to get a fuller set of branches & stops
+            function mergeSequences(outbound, inbound) {
+                const lookup = { ...buildStopLookup(outbound) }
+                const inLookup = buildStopLookup(inbound)
+                Object.keys(inLookup).forEach((k) => {
+                    lookup[k] = lookup[k] || inLookup[k]
+                })
+
+                const branches = [...buildBranchPolylines(outbound, lookup), ...buildBranchPolylines(inbound, lookup)]
+
+                // Deduplicate branches by set of naptanIds (order-insensitive)
+                const seen = new Set()
+                const unique = []
+                for (const b of branches) {
+                    const key = JSON.stringify([...new Set(b.naptanIds)].sort())
+                    if (!seen.has(key)) {
+                        seen.add(key)
+                        unique.push(b)
+                    }
+                }
+
+                return { lookup, branches: unique }
+            }
+
+            // Main
+            ;(async function init() {
+                // Base map
+                const map = L.map('map')
+                const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                    attribution: '&copy; OpenStreetMap'
+                }).addTo(map)
+
+                // Fetch both directions
+                const [outbound, inbound] = await Promise.all([
+                    fetchRouteSequence(LINE_ID, 'outbound'),
+                    fetchRouteSequence(LINE_ID, 'inbound')
+                ])
+
+                const { lookup, branches } = mergeSequences(outbound, inbound)
+
+                // Draw branches
+                const branchLayers = []
+                branches.forEach((b, i) => {
+                    const color = branchColor(i)
+                    const pl = L.polyline(b.coords, {
+                        color,
+                        weight: 5,
+                        opacity: 0.9,
+                        lineJoin: 'round'
+                    }).addTo(map)
+                    pl.bindPopup(`<strong>${b.name}</strong>`)
+                    branchLayers.push(pl)
+
+                    // Legend entry
+                    const row = document.createElement('div')
+                    row.innerHTML = `<span class="swatch" style="background:${color}"></span> ${b.name}`
+                    document.getElementById('legend').appendChild(row)
+                })
+
+                // Station markers (deduped)
+                const stations = Object.values(lookup)
+                const markerGroup = L.layerGroup(
+                    stations.map((sp) =>
+                        L.circleMarker([sp.lat, sp.lon], {
+                            radius: 4,
+                            color: '#333',
+                            weight: 1,
+                            fillColor: '#fff',
+                            fillOpacity: 1
+                        }).bindTooltip(sp.name, { direction: 'top', offset: [0, -6] })
+                    )
+                ).addTo(map)
+
+                // Fit bounds
+                const allLatLngs = branches.flatMap((b) => b.coords)
+                if (allLatLngs.length) {
+                    map.fitBounds(allLatLngs, { padding: [20, 20] })
+                } else {
+                    // Fallback view around Central line area
+                    map.setView([51.515, -0.1], 11)
+                }
+
+                // Optional layer control
+                L.control
+                    .layers(
+                        { OpenStreetMap: osm },
+                        { Stations: markerGroup, Branches: L.layerGroup(branchLayers) },
+                        { collapsed: true }
+                    )
+                    .addTo(map)
+            })().catch((err) => {
+                console.error(err)
+                alert('Failed to load TfL data. See console for details.')
+            })
+        </script>
+    </body>
+</html>

@@ -4,27 +4,25 @@ import { useEffect } from 'react'
 import { revalidateArrivals } from '@/server/tfl'
 
 interface AutoRefreshTimerProps {
-    line: string
-    station: string
+    stationId: string
     intervalMs?: number
 }
 
-export default function AutoRefreshTimer({ 
-    line, 
-    station, 
+export function AutoRefreshTimer({ 
+    stationId, 
     intervalMs = 30000 
 }: AutoRefreshTimerProps) {
     useEffect(() => {
         const interval = setInterval(async () => {
             try {
-                await revalidateArrivals(line, station)
+                await revalidateArrivals(stationId)
             } catch (error) {
                 console.error('Failed to revalidate arrivals:', error)
             }
         }, intervalMs)
 
         return () => clearInterval(interval)
-    }, [line, station, intervalMs])
+    }, [stationId, intervalMs])
 
     // This component doesn't render anything visible
     return null

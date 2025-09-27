@@ -1,0 +1,21 @@
+{
+  "$type": "Tfl.Api.Presentation.Entities.Line, Tfl.Api.Presentation.Entities",
+  "id": "waterloo-city",
+  "name": "Waterloo & City",
+  "modeName": "tube",
+  "disruptions": [],
+  "created": "2025-09-24T10:13:26.317Z",
+  "modified": "2025-09-24T10:13:26.317Z",
+  "lineStatuses": [],
+  "routeSections": [],
+  "serviceTypes": [
+    {
+      "$type": "Tfl.Api.Presentation.Entities.LineServiceTypeInfo, Tfl.Api.Presentation.Entities",
+      "name": "Regular",
+      "uri": "/Line/Route?ids=Waterloo & City&serviceTypes=Regular"
+    }
+  ],
+  "crowding": {
+    "$type": "Tfl.Api.Presentation.Entities.Crowding, Tfl.Api.Presentation.Entities"
+  }
+}

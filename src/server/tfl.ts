@@ -1,42 +1,13 @@
 'use server'
 
-import { getArrivals } from '@/lib/api'
+import fs from 'fs'
+import { getArrivals, getLineRoute, getVehiclePositions } from '@/lib/api'
 import { revalidatePath } from 'next/cache'
+import { cleanName } from '@/lib/utils'
+import { ArrivalRow } from '@/types' 
 
-// const example = {
-//     $type: 'Tfl.Api.Presentation.Entities.Prediction, Tfl.Api.Presentation.Entities',
-//     id: '-1230734648',
-//     operationType: 1,
-//     vehicleId: '056',
-//     naptanId: '940GZZLUWSD',
-//     stationName: 'Wanstead Underground Station',
-//     lineId: 'central',
-//     lineName: 'Central',
-//     platformName: 'Inner Rail - Platform 2',
-//     direction: 'outbound',
-//     bearing: '',
-//     destinationNaptanId: '940GZZLUHLT',
-//     destinationName: 'Hainault Underground Station',
-//     timestamp: '2025-09-22T09:17:55.8449253Z',
-//     timeToStation: 1564,
-//     currentLocation: 'At Chancery Lane',
-//     towards: 'Hainault via Newbury Park',
-//     expectedArrival: '2025-09-22T09:43:59Z',
-//     timeToLive: '2025-09-22T09:43:59Z',
-//     modeName: 'tube',
-//     timing: {
-//         $type: 'Tfl.Api.Presentation.Entities.PredictionTiming, Tfl.Api.Presentation.Entities',
-//         countdownServerAdjustment: '00:00:00',
-//         source: '0001-01-01T00:00:00',
-//         insert: '0001-01-01T00:00:00',
-//         read: '2025-09-22T09:18:11.604Z',
-//         sent: '2025-09-22T09:17:55Z',
-//         received: '0001-01-01T00:00:00'
-//     }
-// }
-
-export async function loadArrivals(line:string, station:string) {
-    const data = await getArrivals(line, station)
+export async function loadArrivals(lineId: string, stationId: string) {
+    const data = await getArrivals(lineId, stationId)
     data.sort((a: any, b: any) => a.timeToStation - b.timeToStation)
 
     const rows = data.slice(0, 10).map((item: any) => {
@@ -55,55 +26,137 @@ export async function loadArrivals(line:string, station:string) {
     return rows
 }
 
-export async function loadArrivalsByPlatform(line:string, station:string) {
-    const data = await getArrivals(line, station)
+// export async function loadArrivalsByPlatform(line: string, station: string) {
+//     const data = await getArrivals(line, station)
+//     console.log(data)
+//     data.sort((a: any, b: any) => a.timeToStation - b.timeToStation)
+
+//     // Group arrivals by platform
+//     const platformGroups: { [key: string]: any[] } = {}
+
+//     data.forEach((item: any) => {
+//         const platformName = item.platformName || 'Unknown Platform'
+//         if (!platformGroups[platformName]) {
+//             platformGroups[platformName] = []
+//         }
+//         platformGroups[platformName].push(item)
+//     })
+
+//     // Convert each platform group to display format and sort by platform number
+//     const platformBoards = Object.entries(platformGroups)
+//         .map(([platformName, arrivals]) => {
+//             let stationName = ''
+//             const rows = arrivals.slice(0, 8).map((item: any) => {
+//                 stationName = cleanName(item.stationName);
+//                 const mins = Math.max(0, Math.round(item.timeToStation / 60))
+//                 const due = mins <= 0 ? 'Due' : `${mins} min`
+//                 return {
+//                     due,
+//                     dest: cleanName(item.destinationName || item.towards || item.towards),
+//                     via: item.platformName?.replace(/.*-\s*/, '') || item.towards || '',
+//                     plat: (item.platformName || '').match(/Platform\s(\d+)/)?.[1] || '',
+//                     status: item.modeName === 'tube' ? 'Good Service' : ''
+//                 }
+//             })
+
+//             // Extract platform number for sorting
+//             const platformNumber = parseInt(platformName.match(/Platform\s(\d+)/)?.[1] || '999')
+
+//             return {
+//                 stationName,
+//                 platformName,
+//                 platformNumber,
+//                 arrivals: rows
+//             }
+//         })
+//         .sort((a, b) => a.platformNumber - b.platformNumber)
+//         .map(({ stationName, platformName, arrivals }) => ({ stationName, platformName, arrivals }))
+
+//     return platformBoards
+// }
+
+export async function loadArrivalsByDirection(lineId: string, stationId: string) {
+    const data = await getArrivals(lineId, stationId)
+    const lineName = `${lineId.charAt(0).toUpperCase() + lineId.slice(1)} Line`
+
     // console.log(data)
     data.sort((a: any, b: any) => a.timeToStation - b.timeToStation)
 
     // Group arrivals by platform
-    const platformGroups: { [key: string]: any[] } = {}
-    
+    const directionGroups: { [key: string]: any[] } = {}
+
     data.forEach((item: any) => {
-        const platformName = item.platformName || 'Unknown Platform'
-        if (!platformGroups[platformName]) {
-            platformGroups[platformName] = []
+        if (!directionGroups[item.direction]) {
+            directionGroups[item.direction] = []
         }
-        platformGroups[platformName].push(item)
+        directionGroups[item.direction].push(item)
     })
 
     // Convert each platform group to display format and sort by platform number
-    const platformBoards = Object.entries(platformGroups)
-        .map(([platformName, arrivals]) => {
+    const directionBoards = Object.entries(directionGroups)
+        .map(([direction, arrivalsData]) => {
             let stationName = ''
-            const rows = arrivals.slice(0, 8).map((item: any) => {
-                stationName = item.stationName.replace("Underground Station","")
+            const arrivals: ArrivalRow[] = arrivalsData.slice(0, 8).map((item: any) => {
+                stationName = cleanName(item.stationName)
                 const mins = Math.max(0, Math.round(item.timeToStation / 60))
                 const due = mins <= 0 ? 'Due' : `${mins} min`
                 return {
+                    platformName: item.platformName,
                     due,
-                    dest: (item.destinationName || item.towards || item.towards).replace("Underground Station",""),
+                    dest: cleanName(item.destinationName || item.towards || item.towards),
                     via: item.platformName?.replace(/.*-\s*/, '') || item.towards || '',
                     plat: (item.platformName || '').match(/Platform\s(\d+)/)?.[1] || '',
                     status: item.modeName === 'tube' ? 'Good Service' : ''
                 }
             })
 
-            // Extract platform number for sorting
-            const platformNumber = parseInt(platformName.match(/Platform\s(\d+)/)?.[1] || '999')
-            
             return {
                 stationName,
-                platformName,
-                platformNumber,
-                arrivals: rows
+                direction,
+                arrivals
             }
         })
-        .sort((a, b) => a.platformNumber - b.platformNumber)
-        .map(({ stationName, platformName, arrivals }) => ({ stationName, platformName, arrivals }))
+        // .sort((a, b) => a.platformNumber - b.platformNumber)
+        .map(({ stationName, direction, arrivals }) => ({ 
+            lineId, 
+            lineName, 
+            stationId,
+            stationName, 
+            direction, 
+            arrivals 
+        }))
 
-    return platformBoards
+    return directionBoards
 }
 
-export async function revalidateArrivals(line: string, station: string) {
-    revalidatePath(`/${line}/${station}`)
+export async function revalidateArrivals(stationId: string) {
+    revalidatePath(`/station/${stationId}`)
+}
+
+export async function loadLineRoute(lineId: string) {
+    const route = await getLineRoute(lineId)
+    return route
+}
+
+export async function loadVehiclePositions(lineId: string) {
+    const positions = await getVehiclePositions(lineId)
+    fs.writeFileSync('./src/data/positions.json', JSON.stringify(positions, null, 2))
+
+    // Process vehicle positions to get current locations
+    const vehicles = positions.map((vehicle: any) => {
+        // console.log(vehicle)
+        return {
+            id: vehicle.vehicleId,
+            currentLocation: vehicle.currentLocation,
+            destination: vehicle.destinationName || vehicle.towards,
+            direction: vehicle.direction,
+            timeToStation: vehicle.timeToStation,
+            stationName: vehicle.stationName,
+            lineId: vehicle.lineId,
+            lineName: vehicle.lineName,
+            naptanId: vehicle.naptanId
+        }
+    })
+
+    return vehicles
 }

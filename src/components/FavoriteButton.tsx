@@ -1,35 +1,27 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { addFavorite, removeFavorite, isFavorite, FavoriteStation } from '@/lib/favorites'
+import { addFavorite, removeFavorite, isFavorite } from '@/lib/favorites'
+import { Station } from '@/types'
 
 interface FavoriteButtonProps {
-    line: string
-    stationId: string
-    stationName: string
-    lineName: string
+    station: Station
 }
 
-export function FavoriteButton({ line, stationId, stationName, lineName }: FavoriteButtonProps) {
+export function FavoriteButton({ station }: FavoriteButtonProps) {
     const [favorited, setFavorited] = useState(false)
 
     useEffect(() => {
-        setFavorited(isFavorite(line, stationId))
-    }, [line, stationId])
+        setFavorited(isFavorite(station.id))
+    }, [station.id])
 
     const handleToggle = () => {
-        const favoriteData: FavoriteStation = {
-            line,
-            stationId,
-            stationName,
-            lineName
-        }
 
         if (favorited) {
-            removeFavorite(line, stationId)
+            removeFavorite(station.id)
             setFavorited(false)
         } else {
-            addFavorite(favoriteData)
+            addFavorite(station)
             setFavorited(true)
         }
     }

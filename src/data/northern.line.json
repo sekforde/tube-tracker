@@ -1,0 +1,26 @@
+{
+  "$type": "Tfl.Api.Presentation.Entities.Line, Tfl.Api.Presentation.Entities",
+  "id": "northern",
+  "name": "Northern",
+  "modeName": "tube",
+  "disruptions": [],
+  "created": "2025-09-24T10:13:26.317Z",
+  "modified": "2025-09-24T10:13:26.317Z",
+  "lineStatuses": [],
+  "routeSections": [],
+  "serviceTypes": [
+    {
+      "$type": "Tfl.Api.Presentation.Entities.LineServiceTypeInfo, Tfl.Api.Presentation.Entities",
+      "name": "Regular",
+      "uri": "/Line/Route?ids=Northern&serviceTypes=Regular"
+    },
+    {
+      "$type": "Tfl.Api.Presentation.Entities.LineServiceTypeInfo, Tfl.Api.Presentation.Entities",
+      "name": "Night",
+      "uri": "/Line/Route?ids=Northern&serviceTypes=Night"
+    }
+  ],
+  "crowding": {
+    "$type": "Tfl.Api.Presentation.Entities.Crowding, Tfl.Api.Presentation.Entities"
+  }
+}

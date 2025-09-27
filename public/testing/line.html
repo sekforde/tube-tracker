@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TfL Route → SVG Tree (Central line, outbound)</title>
+  <style>
+    /* Minimal: white background, black text */
+    html, body { height: 100%; margin: 0; background: #fff; color: #000; }
+    body { display: grid; place-items: center; }
+    svg { width: min(1280px, 96vw); height: auto; display: block; }
+
+    :root{ --line:#E32017; }
+    .line      { stroke: var(--line); stroke-width: 8; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+    .connector { stroke: var(--line); stroke-width: 8; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+    .tick      { stroke: #000; stroke-width: 3; }
+    .label     { fill: #000; font: 12px/1.1 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial; dominant-baseline: middle; }
+  </style>
+</head>
+<body>
+  <svg viewBox="0 0 1600 520" role="img" aria-label="Tube line schematic with 45 degree branches">
+    <g id="g-lines"></g>
+    <g id="g-ticks"></g>
+    <g id="g-labels"></g>
+  </svg>
+
+  <script>
+    // === Config ===
+    const LINE_ID = 'central';
+    const DIRECTION = 'outbound'; // change to 'inbound' for other direction
+
+    const cfg = {
+      originX: 60,
+      originY: 260,   // y for trunk
+      stepX: 66,      // horizontal spacing between stations
+      branchGap: 60,  // vertical gap between parallel lines
+      tickLen: 8,
+      labelDx: 8
+    };
+
+    // Optionally add TfL app credentials for higher rate limits
+    const APP_ID = '';
+    const APP_KEY = '';
+
+    // === DOM refs ===
+    const gLines  = document.getElementById('g-lines');
+    const gTicks  = document.getElementById('g-ticks');
+    const gLabels = document.getElementById('g-labels');
+
+    // === SVG helpers ===
+    function el(tag, attrs){ const n = document.createElementNS('http://www.w3.org/2000/svg', tag); for (const k in attrs) n.setAttribute(k, attrs[k]); return n; }
+    function drawSegment(x1, x2, y){ gLines.appendChild(el('path', { d:`M ${x1} ${y} L ${x2} ${y}`, class:'line' })); }
+    function drawConnector(x, yMain, yBranch){
+      const dy = yBranch - yMain; const dx = Math.abs(dy);
+      const x2 = x + dx; const y2 = yBranch;
+      gLines.appendChild(el('path', { d:`M ${x} ${yMain} L ${x2} ${y2}`, class:'connector' }));
+      return { x2, y2 };
+    }
+    function drawStop(x, y, name, labelAbove=false){
+      const y2 = y + (labelAbove ? -cfg.tickLen : cfg.tickLen);
+      gTicks.appendChild(el('line', { x1:x, y1:y, x2:x, y2, class:'tick' }));
+      const t = el('text', { x: x + cfg.labelDx, y: labelAbove ? y2 - 10 : y2 + 10, class:'label' });
+      t.textContent = name; gLabels.appendChild(t);
+    }
+
+    // === Fetch TfL route sequence ===
+    async function fetchRouteSequence(lineId, direction){
+      const qs = new URLSearchParams();
+      if (APP_ID && APP_KEY) { qs.set('app_id', APP_ID); qs.set('app_key', APP_KEY); }
+      const url = `https://api.tfl.gov.uk/Line/${lineId}/Route/Sequence/${direction}${qs.toString()?`?${qs}`:''}`;
+      const res = await fetch(url, { cache: 'no-store' });
+      if (!res.ok) throw new Error(`TfL error ${res.status} ${res.statusText}`);
+      return res.json();
+    }
+
+    // === Build lookup from StopPoints ===
+    function buildLookup(routeSeq){
+      const lookup = {};
+      const seqStops = (routeSeq.stopPointSequences||[]).flatMap(s => s.stopPoints||[]);
+      const stations = routeSeq.stations || [];
+      [...seqStops, ...stations].forEach(sp => {
+        if (!lookup[sp.id]) lookup[sp.id] = { id: sp.id, name: sp.commonName || sp.name || sp.id, lat: sp.lat, lon: sp.lon };
+      });
+      return lookup;
+    }
+
+    // === Choose trunk and branches ===
+    function selectTrunkAndBranches(orderedLineRoutes){
+      const routes = orderedLineRoutes.map(r => ({ name: r.name || 'Route', ids: r.naptanIds||[] }));
+      // pick the longest route as trunk
+      routes.sort((a,b)=>b.ids.length - a.ids.length);
+      const trunk = routes.shift();
+      const branches = routes; // the rest become branches
+      return { trunk, branches };
+    }
+
+    // Find where a branch first meets the trunk; return trunk index and branch slice beyond junction
+    function splitBranchAtTrunk(branchIds, trunkIds){
+      // find earliest position in branch that exists in trunk
+      let meetBranchIdx = -1, meetTrunkIdx = -1;
+      for (let i=0;i<branchIds.length;i++){
+        const tIdx = trunkIds.indexOf(branchIds[i]);
+        if (tIdx !== -1){ meetBranchIdx = i; meetTrunkIdx = tIdx; break; }
+      }
+      if (meetBranchIdx === -1) return null; // no overlap (unlikely)
+      // Consume any contiguous shared segment along trunk direction
+      let b = meetBranchIdx, t = meetTrunkIdx;
+      while (b+1 < branchIds.length && t+1 < trunkIds.length && branchIds[b+1] === trunkIds[t+1]){ b++; t++; }
+      // branch path is the remainder beyond the shared segment
+      const branchRemainder = branchIds.slice(b+1);
+      return { trunkIdx: t, remainder: branchRemainder };
+    }
+
+    // Render a linear sequence of station IDs horizontally on given track index
+    function renderSequenceByIds(ids, lookup, startX, trackIndex){
+      const y = cfg.originY + trackIndex * cfg.branchGap;
+      let x = startX;
+      if (!ids.length) return { endX: x };
+      // first
+      drawStop(x, y, lookup[ids[0]]?.name || ids[0], false);
+      for (let i=1;i<ids.length;i++){
+        const prevX = x; x += cfg.stepX; drawSegment(prevX, x, y);
+        drawStop(x, y, lookup[ids[i]]?.name || ids[i], i%2===0);
+      }
+      return { endX: x };
+    }
+
+    async function main(){
+      const seq = await fetchRouteSequence(LINE_ID, DIRECTION);
+      const lookup = buildLookup(seq);
+      const { trunk, branches } = selectTrunkAndBranches(seq.orderedLineRoutes||[]);
+
+      // Render trunk left→right starting at originX
+      const trunkStartX = cfg.originX;
+      const trunkTrack = 0;
+      renderSequenceByIds(trunk.ids, lookup, trunkStartX, trunkTrack);
+
+      // Prepare a map of trunk station id -> x position for connector placement
+      const trunkPositions = new Map();
+      { // compute
+        let x = trunkStartX; trunkPositions.set(trunk.ids[0], x);
+        for (let i=1;i<trunk.ids.length;i++){ x += cfg.stepX; trunkPositions.set(trunk.ids[i], x); }
+      }
+
+      // Render each branch on its own track below the trunk
+      let nextBranchTrack = 1;
+      for (const br of branches){
+        const split = splitBranchAtTrunk(br.ids, trunk.ids);
+        if (!split || split.remainder.length===0) continue; // nothing to draw if fully overlaps
+        const yMain = cfg.originY + trunkTrack * cfg.branchGap;
+        const yBranch = cfg.originY + nextBranchTrack * cfg.branchGap;
+        const xAtJunction = trunkPositions.get(trunk.ids[split.trunkIdx]) || cfg.originX;
+        const { x2 } = drawConnector(xAtJunction, yMain, yBranch);
+        // Render the branch remainder starting at connector end
+        renderSequenceByIds(split.remainder, lookup, x2, nextBranchTrack);
+        nextBranchTrack++;
+      }
+    }
+
+    main().catch(err => { console.error(err); alert('Failed to load or render TfL data. See console.'); });
+  </script>
+</body>
+</html>

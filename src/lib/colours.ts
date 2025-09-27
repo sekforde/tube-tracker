@@ -15,3 +15,10 @@ export const lineColors = [
     { "id": "tramlink",         "color": "#84B817" },
     { "id": "crossrail",        "color": "#7156A5" }
   ]
+
+  export const lineColorHash: {[lineId:string]: string} = lineColors.reduce((acc, lineColor) => {
+    acc[lineColor.id] = lineColor.color
+    return acc
+  }, {})
+
+  // console.log(lineColorHash)

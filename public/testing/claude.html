@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tube Map Visualizer</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            font-weight: 300;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .controls {
+            padding: 30px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .input-section {
+            margin-bottom: 20px;
+        }
+
+        .input-section h3 {
+            margin: 0 0 15px 0;
+            color: #2c3e50;
+            font-size: 1.2em;
+        }
+
+        textarea {
+            width: 100%;
+            height: 120px;
+            padding: 15px;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            resize: vertical;
+            transition: border-color 0.3s ease;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+        }
+
+        .map-container {
+            padding: 30px;
+            position: relative;
+        }
+
+        .tube-map {
+            position: relative;
+            overflow: auto;
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 40px;
+            min-height: 300px;
+            max-height: 600px;
+            white-space: nowrap;
+        }
+
+        .station {
+            position: absolute;
+            background: white;
+            border: 3px solid #e74c3c;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 10;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            top: -10px;
+            left: -8px;
+        }
+
+        .station-label {
+            position: absolute;
+            top: -50px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 11px;
+            font-weight: bold;
+            color: #2c3e50;
+            white-space: normal;
+            text-align: center;
+            max-width: 120px;
+            word-wrap: break-word;
+            line-height: 1.2;
+            z-index: 15;
+        }
+
+        .station:hover {
+            transform: scale(1.3);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+            z-index: 20;
+        }
+
+        .station-label:hover {
+            color: #1a252f;
+            z-index: 25;
+        }
+
+        /* SVG specific styles */
+        svg .station {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        svg .station:hover {
+            r: 10;
+            stroke-width: 4;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
+        }
+
+        svg .station-label:hover {
+            fill: #1a252f;
+            font-size: 12;
+        }
+
+        .line {
+            position: absolute;
+            background: #3498db;
+            z-index: 1;
+            border-radius: 2px;
+            transition: all 0.3s ease;
+        }
+
+        .line.horizontal {
+            height: 4px;
+        }
+
+        .line.vertical {
+            width: 4px;
+        }
+
+        .info-panel {
+            background: #e8f4fd;
+            border: 1px solid #b3d7f0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .coordinates-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 14px;
+        }
+
+        .coordinates-table th,
+        .coordinates-table td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .coordinates-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 0;
+                border-radius: 0;
+            }
+            
+            .header {
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .controls {
+                padding: 20px;
+            }
+            
+            .button-group {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚇 London Central Line Visualizer</h1>
+            <p style="margin: 10px 0 0 0; opacity: 0.9; font-size: 1.1em;">Interactive tube map with real London Underground data</p>
+        </div>
+
+        <div class="controls">
+            <div class="input-section">
+                <h3>Input Arrays (JSON format)</h3>
+                <textarea id="inputData" placeholder='Enter your arrays in JSON format, e.g.:
+[
+  [{"id": "1", "name": "Station A"}, {"id": "2", "name": "Station B"}],
+  [{"id": "2", "name": "Station B"}, {"id": "3", "name": "Station C"}]
+]'></textarea>
+            </div>
+            
+            <div class="button-group">
+                <button class="btn-primary" onclick="generateMap()">Generate Map</button>
+                <button class="btn-secondary" onclick="loadExample()">Load Example</button>
+                <button class="btn-secondary" onclick="clearMap()">Clear</button>
+            </div>
+            
+            <div class="orientation-controls">
+                <h4 style="margin: 20px 0 10px 0; color: #2c3e50;">Map Orientation</h4>
+                <div style="display: flex; gap: 15px; align-items: center;">
+                    <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                        <input type="radio" name="orientation" value="horizontal" checked onchange="setOrientation('horizontal')">
+                        <span>Horizontal</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                        <input type="radio" name="orientation" value="vertical" onchange="setOrientation('vertical')">
+                        <span>Vertical</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="map-container">
+            <div id="mapDisplay" class="tube-map">
+                <svg id="tubeMapSVG" style="width: 100%; height: 100%;">
+                    <p style="text-align: center; color: #6c757d; margin-top: 100px;">
+                        Enter your data above and click "Generate Map" to visualize your tube map
+                    </p>
+                </svg>
+            </div>
+            
+            <div id="infoPanel" class="info-panel" style="display: none;">
+                <h4>Generated Coordinates</h4>
+                <table id="coordinatesTable" class="coordinates-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Row</th>
+                            <th>Column</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global orientation setting
+        let mapOrientation = 'horizontal';
+
+        function setOrientation(orientation) {
+            mapOrientation = orientation;
+            // Regenerate map if data exists
+            const inputData = document.getElementById('inputData').value.trim();
+            if (inputData) {
+                generateMap();
+            }
+        }
+
+        /**
+         * Checks if an array represents a branch divergence from previous arrays
+         * This happens when arrays share common stations but then diverge to different destinations
+         */
+        function checkForBranchDivergence(currentArray, previousArrays) {
+            // Find the longest common prefix with any previous array
+            let maxCommonLength = 0;
+            let divergencePoint = -1;
+            
+            for (const prevArray of previousArrays) {
+                let commonLength = 0;
+                const minLength = Math.min(currentArray.length, prevArray.length);
+                
+                // Find how many stations are common from the start
+                for (let i = 0; i < minLength; i++) {
+                    if (currentArray[i].id === prevArray[i].id) {
+                        commonLength++;
+                    } else {
+                        break;
+                    }
+                }
+                
+                // If we found a longer common prefix, update our tracking
+                if (commonLength > maxCommonLength) {
+                    maxCommonLength = commonLength;
+                    divergencePoint = commonLength;
+                }
+            }
+            
+            // Check if there's divergence after the common prefix
+            if (divergencePoint > 0 && divergencePoint < currentArray.length) {
+                // Check if the next station after the common prefix is different
+                for (const prevArray of previousArrays) {
+                    if (divergencePoint < prevArray.length && 
+                        currentArray[divergencePoint].id !== prevArray[divergencePoint].id) {
+                        return true; // Found a divergence point
+                    }
+                }
+            }
+            
+            return false;
+        }
+
+        /**
+         * Assigns row and column coordinates to objects across overlapping arrays
+         * to create a tube map-like layout
+         */
+        function generateTubeMapCoordinates(arrays) {
+            if (!arrays || arrays.length === 0) {
+                return [];
+            }
+
+            const objectMap = new Map();
+            const result = [];
+            
+            // First pass: collect all unique objects
+            arrays.forEach(array => {
+                array.forEach(obj => {
+                    if (!objectMap.has(obj.id)) {
+                        objectMap.set(obj.id, { ...obj, row: 0, col: 0 });
+                    }
+                });
+            });
+
+            const positioned = new Set();
+            
+            // Start with the first array as the baseline (row 0)
+            const baseline = arrays[0];
+            baseline.forEach((obj, index) => {
+                const coordObj = objectMap.get(obj.id);
+                coordObj.row = 0;
+                coordObj.col = index;
+                positioned.add(obj.id);
+            });
+
+            // Process remaining arrays
+            for (let arrayIndex = 1; arrayIndex < arrays.length; arrayIndex++) {
+                const currentArray = arrays[arrayIndex];
+                const previousArray = arrays[arrayIndex - 1];
+                
+                const connections = [];
+                currentArray.forEach((obj, index) => {
+                    if (positioned.has(obj.id)) {
+                        connections.push({
+                            id: obj.id,
+                            arrayPosition: index,
+                            currentCoords: objectMap.get(obj.id)
+                        });
+                    }
+                });
+
+                // Check if this array starts differently than the previous array
+                const startsWithDifferentStation = currentArray[0].id !== previousArray[0].id;
+                
+                // Check for branch divergence - when arrays share common stations but then diverge
+                const isBranchDivergence = checkForBranchDivergence(currentArray, arrays.slice(0, arrayIndex));
+                
+                if (connections.length === 0) {
+                    // No connections at all - definitely a new branch
+                    assignNewBranch(currentArray, objectMap, positioned, getNextAvailableRow(objectMap));
+                } else if (startsWithDifferentStation && connections[0].arrayPosition > 0) {
+                    // Array starts with a different station and the first connection is not at position 0
+                    // This means we have new stations at the beginning that should be on a new row
+                    const branchRow = getNextAvailableRow(objectMap);
+                    assignBranchFromConnection(currentArray, connections[0], objectMap, positioned, branchRow);
+                } else if (isBranchDivergence) {
+                    // This array represents a different branch from a common point
+                    const branchRow = getNextAvailableRow(objectMap);
+                    const firstConnection = connections[0];
+                    assignBranchFromConnection(currentArray, firstConnection, objectMap, positioned, branchRow);
+                } else if (connections.length === 1) {
+                    const connection = connections[0];
+                    // Only create a new branch if the connection is not at the start of the array
+                    // and there are new stations before the connection
+                    if (connection.arrayPosition > 0) {
+                        const branchRow = getNextAvailableRow(objectMap);
+                        assignBranchFromConnection(currentArray, connection, objectMap, positioned, branchRow);
+                    } else {
+                        // Connection is at the start, just extend the existing line
+                        assignBridgingPath(currentArray, connections, objectMap, positioned);
+                    }
+                } else {
+                    assignBridgingPath(currentArray, connections, objectMap, positioned);
+                }
+            }
+
+            objectMap.forEach(obj => result.push(obj));
+            
+            return result.sort((a, b) => {
+                if (a.row !== b.row) return a.row - b.row;
+                return a.col - b.col;
+            });
+        }
+
+        function assignNewBranch(array, objectMap, positioned, row) {
+            array.forEach((obj, index) => {
+                const coordObj = objectMap.get(obj.id);
+                coordObj.row = row;
+                coordObj.col = index;
+                positioned.add(obj.id);
+            });
+        }
+
+        function assignBranchFromConnection(array, connection, objectMap, positioned, branchRow) {
+            const connectionIndex = connection.arrayPosition;
+            const connectionCol = connection.currentCoords.col;
+            
+            for (let i = 0; i < connectionIndex; i++) {
+                const obj = array[i];
+                if (!positioned.has(obj.id)) {
+                    const coordObj = objectMap.get(obj.id);
+                    coordObj.row = branchRow;
+                    coordObj.col = connectionCol - (connectionIndex - i);
+                    positioned.add(obj.id);
+                }
+            }
+            
+            for (let i = connectionIndex + 1; i < array.length; i++) {
+                const obj = array[i];
+                if (!positioned.has(obj.id)) {
+                    const coordObj = objectMap.get(obj.id);
+                    coordObj.row = branchRow;
+                    coordObj.col = connectionCol + (i - connectionIndex);
+                    positioned.add(obj.id);
+                }
+            }
+        }
+
+        function assignBridgingPath(array, connections, objectMap, positioned, targetRow = null) {
+            connections.sort((a, b) => a.arrayPosition - b.arrayPosition);
+            
+            const firstConnection = connections[0];
+            const lastConnection = connections[connections.length - 1];
+            
+            const useRow = targetRow || firstConnection.currentCoords.row;
+            
+            const colStart = firstConnection.currentCoords.col;
+            const colEnd = lastConnection.currentCoords.col;
+            const arrayStart = firstConnection.arrayPosition;
+            const arrayEnd = lastConnection.arrayPosition;
+            
+            array.forEach((obj, index) => {
+                if (!positioned.has(obj.id)) {
+                    const coordObj = objectMap.get(obj.id);
+                    coordObj.row = useRow;
+                    
+                    if (index <= arrayStart) {
+                        coordObj.col = colStart - (arrayStart - index);
+                    } else if (index >= arrayEnd) {
+                        coordObj.col = colEnd + (index - arrayEnd);
+                    } else {
+                        const progress = (index - arrayStart) / (arrayEnd - arrayStart);
+                        coordObj.col = Math.round(colStart + (colEnd - colStart) * progress);
+                    }
+                    
+                    positioned.add(obj.id);
+                }
+            });
+        }
+
+        function getNextAvailableRow(objectMap) {
+            let maxRow = -1;
+            objectMap.forEach(obj => {
+                maxRow = Math.max(maxRow, obj.row);
+            });
+            return maxRow + 1;
+        }
+
+        function generateMap() {
+            const inputData = document.getElementById('inputData').value.trim();
+            const mapDisplay = document.getElementById('mapDisplay');
+            const infoPanel = document.getElementById('infoPanel');
+            const tableBody = document.querySelector('#coordinatesTable tbody');
+
+            try {
+                const arrays = JSON.parse(inputData);
+                
+                if (!Array.isArray(arrays) || arrays.length === 0) {
+                    throw new Error('Input must be a non-empty array of arrays');
+                }
+
+                const coordinates = generateTubeMapCoordinates(arrays);
+                
+                if (coordinates.length === 0) {
+                    throw new Error('No coordinates generated');
+                }
+
+                // Clear previous content
+                mapDisplay.innerHTML = '';
+                tableBody.innerHTML = '';
+
+                // Calculate bounds and scaling
+                let minRow, maxRow, minCol, maxCol;
+                
+                if (mapOrientation === 'vertical') {
+                    // For vertical orientation, swap row/col coordinates
+                    const swappedCoordinates = coordinates.map(obj => ({
+                        ...obj,
+                        row: obj.col,
+                        col: obj.row
+                    }));
+                    minRow = Math.min(...swappedCoordinates.map(obj => obj.row));
+                    maxRow = Math.max(...swappedCoordinates.map(obj => obj.row));
+                    minCol = Math.min(...swappedCoordinates.map(obj => obj.col));
+                    maxCol = Math.max(...swappedCoordinates.map(obj => obj.col));
+                    // Update coordinates with swapped values
+                    coordinates.forEach((obj, index) => {
+                        obj.row = swappedCoordinates[index].row;
+                        obj.col = swappedCoordinates[index].col;
+                    });
+                } else {
+                    minRow = Math.min(...coordinates.map(obj => obj.row));
+                    maxRow = Math.max(...coordinates.map(obj => obj.row));
+                    minCol = Math.min(...coordinates.map(obj => obj.col));
+                    maxCol = Math.max(...coordinates.map(obj => obj.col));
+                }
+                
+                const cellWidth = 80;
+                const cellHeight = 50;
+                const offsetX = 150;
+                const offsetY = 50;
+
+                // Create SVG container
+                const svgWidth = (maxCol - minCol + 1) * cellWidth + offsetX * 2;
+                const svgHeight = (maxRow - minRow + 1) * cellHeight + offsetY * 2;
+                
+                const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                svg.setAttribute('width', svgWidth);
+                svg.setAttribute('height', svgHeight);
+                svg.setAttribute('viewBox', `0 0 ${svgWidth} ${svgHeight}`);
+                svg.style.background = '#f8f9fa';
+
+                // Draw connecting lines between consecutive stations in each array
+                const stationPositions = new Map();
+                
+                coordinates.forEach(station => {
+                    stationPositions.set(station.id, station);
+                });
+
+                // Draw lines for each array (route)
+                arrays.forEach((array, arrayIndex) => {
+                    const color = '#e74c3c'; // All lines are red
+                    
+                    // Draw lines between consecutive stations in this array
+                    for (let i = 0; i < array.length - 1; i++) {
+                        const currentStation = stationPositions.get(array[i].id);
+                        const nextStation = stationPositions.get(array[i + 1].id);
+                        
+                        if (currentStation && nextStation) {
+                            drawSVGLineBetweenStations(currentStation, nextStation, offsetX, offsetY, minRow, minCol, cellWidth, cellHeight, color, svg);
+                        }
+                    }
+                });
+
+        function drawSVGLineBetweenStations(fromStation, toStation, offsetX, offsetY, minRow, minCol, cellWidth, cellHeight, color, svg) {
+            const fromX = offsetX + (fromStation.col - minCol) * cellWidth + 40;
+            const fromY = offsetY + (fromStation.row - minRow) * cellHeight + 20;
+            const toX = offsetX + (toStation.col - minCol) * cellWidth + 40;
+            const toY = offsetY + (toStation.row - minRow) * cellHeight + 20;
+
+            // Create SVG path element
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            path.setAttribute('stroke', color);
+            path.setAttribute('stroke-width', '4');
+            path.setAttribute('fill', 'none');
+            path.setAttribute('stroke-linecap', 'round');
+
+            // Create path data based on station positions
+            let pathData;
+            if (fromStation.row === toStation.row) {
+                // Horizontal line
+                pathData = `M ${fromX} ${fromY} L ${toX} ${toY}`;
+            } else if (fromStation.col === toStation.col) {
+                // Vertical line
+                pathData = `M ${fromX} ${fromY} L ${toX} ${toY}`;
+            } else {
+                // L-shaped line (horizontal then vertical)
+                pathData = `M ${fromX} ${fromY} L ${toX} ${fromY} L ${toX} ${toY}`;
+            }
+
+            path.setAttribute('d', pathData);
+            svg.appendChild(path);
+        }
+
+                // Draw stations
+                coordinates.forEach((station, index) => {
+                    const x = offsetX + (station.col - minCol) * cellWidth + 40;
+                    const y = offsetY + (station.row - minRow) * cellHeight + 20;
+                    
+                    // Create station dot (SVG circle)
+                    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                    circle.setAttribute('cx', x);
+                    circle.setAttribute('cy', y);
+                    circle.setAttribute('r', '8');
+                    circle.setAttribute('fill', 'white');
+                    circle.setAttribute('stroke', '#e74c3c');
+                    circle.setAttribute('stroke-width', '3');
+                    circle.setAttribute('class', 'station');
+                    circle.setAttribute('data-title', `ID: ${station.id}, Row: ${station.row}, Col: ${station.col}`);
+                    
+                    // Create station label (SVG text)
+                    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    text.setAttribute('x', x - 25);
+                    text.setAttribute('y', y);
+                    text.setAttribute('text-anchor', 'middle');
+                    text.setAttribute('dominant-baseline', 'middle');
+                    text.setAttribute('font-family', 'Arial, sans-serif');
+                    text.setAttribute('font-size', '11');
+                    text.setAttribute('font-weight', 'bold');
+                    text.setAttribute('fill', '#2c3e50');
+                    text.setAttribute('class', 'station-label');
+                    text.textContent = station.name;
+                    
+                    svg.appendChild(circle);
+                    svg.appendChild(text);
+
+                    // Add to table
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${station.id}</td>
+                        <td>${station.name}</td>
+                        <td>${station.row}</td>
+                        <td>${station.col}</td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+
+                // Add SVG to the map display
+                mapDisplay.appendChild(svg);
+
+                infoPanel.style.display = 'block';
+
+            } catch (error) {
+                mapDisplay.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+                infoPanel.style.display = 'none';
+            }
+        }
+
+        function loadExample() {
+            // Real London Central Line data with multiple branches
+            const centralLineData = [
+                [
+                    {"id": "940GZZLUWRP", "name": "West Ruislip"},
+                    {"id": "940GZZLURSG", "name": "Ruislip Gardens"},
+                    {"id": "940GZZLUSRP", "name": "South Ruislip"},
+                    {"id": "940GZZLUNHT", "name": "Northolt"},
+                    {"id": "940GZZLUGFD", "name": "Greenford"},
+                    {"id": "940GZZLUPVL", "name": "Perivale"},
+                    {"id": "940GZZLUHGR", "name": "Hanger Lane"},
+                    {"id": "940GZZLUNAN", "name": "North Acton"},
+                    {"id": "940GZZLUEAN", "name": "East Acton"},
+                    {"id": "940GZZLUWCY", "name": "White City"},
+                    {"id": "940GZZLUSBC", "name": "Shepherd's Bush (Central)"},
+                    {"id": "940GZZLUHPK", "name": "Holland Park"},
+                    {"id": "940GZZLUNHG", "name": "Notting Hill Gate"},
+                    {"id": "940GZZLUQWY", "name": "Queensway"},
+                    {"id": "940GZZLULGT", "name": "Lancaster Gate"},
+                    {"id": "940GZZLUMBA", "name": "Marble Arch"},
+                    {"id": "940GZZLUBND", "name": "Bond Street"},
+                    {"id": "940GZZLUOXC", "name": "Oxford Circus"},
+                    {"id": "940GZZLUTCR", "name": "Tottenham Court Road"},
+                    {"id": "940GZZLUHBN", "name": "Holborn"},
+                    {"id": "940GZZLUCHL", "name": "Chancery Lane"},
+                    {"id": "940GZZLUSPU", "name": "St. Paul's"},
+                    {"id": "940GZZLUBNK", "name": "Bank"},
+                    {"id": "940GZZLULVT", "name": "Liverpool Street"},
+                    {"id": "940GZZLUBLG", "name": "Bethnal Green"},
+                    {"id": "940GZZLUMED", "name": "Mile End"},
+                    {"id": "940GZZLUSTD", "name": "Stratford"},
+                    {"id": "940GZZLULYN", "name": "Leyton"},
+                    {"id": "940GZZLULYS", "name": "Leytonstone"},
+                    {"id": "940GZZLUSNB", "name": "Snaresbrook"},
+                    {"id": "940GZZLUSWF", "name": "South Woodford"},
+                    {"id": "940GZZLUWOF", "name": "Woodford"},
+                    {"id": "940GZZLUBKH", "name": "Buckhurst Hill"},
+                    {"id": "940GZZLULGN", "name": "Loughton"},
+                    {"id": "940GZZLUDBN", "name": "Debden"},
+                    {"id": "940GZZLUTHB", "name": "Theydon Bois"},
+                    {"id": "940GZZLUEPG", "name": "Epping"}
+                ],
+                [
+                    {"id": "940GZZLUWRP", "name": "West Ruislip"},
+                    {"id": "940GZZLURSG", "name": "Ruislip Gardens"},
+                    {"id": "940GZZLUSRP", "name": "South Ruislip"},
+                    {"id": "940GZZLUNHT", "name": "Northolt"},
+                    {"id": "940GZZLUGFD", "name": "Greenford"},
+                    {"id": "940GZZLUPVL", "name": "Perivale"},
+                    {"id": "940GZZLUHGR", "name": "Hanger Lane"},
+                    {"id": "940GZZLUNAN", "name": "North Acton"},
+                    {"id": "940GZZLUEAN", "name": "East Acton"},
+                    {"id": "940GZZLUWCY", "name": "White City"},
+                    {"id": "940GZZLUSBC", "name": "Shepherd's Bush (Central)"},
+                    {"id": "940GZZLUHPK", "name": "Holland Park"},
+                    {"id": "940GZZLUNHG", "name": "Notting Hill Gate"},
+                    {"id": "940GZZLUQWY", "name": "Queensway"},
+                    {"id": "940GZZLULGT", "name": "Lancaster Gate"},
+                    {"id": "940GZZLUMBA", "name": "Marble Arch"},
+                    {"id": "940GZZLUBND", "name": "Bond Street"},
+                    {"id": "940GZZLUOXC", "name": "Oxford Circus"},
+                    {"id": "940GZZLUTCR", "name": "Tottenham Court Road"},
+                    {"id": "940GZZLUHBN", "name": "Holborn"},
+                    {"id": "940GZZLUCHL", "name": "Chancery Lane"},
+                    {"id": "940GZZLUSPU", "name": "St. Paul's"},
+                    {"id": "940GZZLUBNK", "name": "Bank"},
+                    {"id": "940GZZLULVT", "name": "Liverpool Street"},
+                    {"id": "940GZZLUBLG", "name": "Bethnal Green"},
+                    {"id": "940GZZLUMED", "name": "Mile End"},
+                    {"id": "940GZZLUSTD", "name": "Stratford"},
+                    {"id": "940GZZLULYN", "name": "Leyton"},
+                    {"id": "940GZZLULYS", "name": "Leytonstone"},
+                    {"id": "940GZZLUSNB", "name": "Snaresbrook"},
+                    {"id": "940GZZLUSWF", "name": "South Woodford"},
+                    {"id": "940GZZLUWOF", "name": "Woodford"},
+                    {"id": "940GZZLURVY", "name": "Roding Valley"},
+                    {"id": "940GZZLUCWL", "name": "Chigwell"},
+                    {"id": "940GZZLUGGH", "name": "Grange Hill"},
+                    {"id": "940GZZLUHLT", "name": "Hainault"}
+                ],
+                [
+                    {"id": "940GZZLUWRP", "name": "West Ruislip"},
+                    {"id": "940GZZLURSG", "name": "Ruislip Gardens"},
+                    {"id": "940GZZLUSRP", "name": "South Ruislip"},
+                    {"id": "940GZZLUNHT", "name": "Northolt"},
+                    {"id": "940GZZLUGFD", "name": "Greenford"},
+                    {"id": "940GZZLUPVL", "name": "Perivale"},
+                    {"id": "940GZZLUHGR", "name": "Hanger Lane"},
+                    {"id": "940GZZLUNAN", "name": "North Acton"},
+                    {"id": "940GZZLUEAN", "name": "East Acton"},
+                    {"id": "940GZZLUWCY", "name": "White City"},
+                    {"id": "940GZZLUSBC", "name": "Shepherd's Bush (Central)"},
+                    {"id": "940GZZLUHPK", "name": "Holland Park"},
+                    {"id": "940GZZLUNHG", "name": "Notting Hill Gate"},
+                    {"id": "940GZZLUQWY", "name": "Queensway"},
+                    {"id": "940GZZLULGT", "name": "Lancaster Gate"},
+                    {"id": "940GZZLUMBA", "name": "Marble Arch"},
+                    {"id": "940GZZLUBND", "name": "Bond Street"},
+                    {"id": "940GZZLUOXC", "name": "Oxford Circus"},
+                    {"id": "940GZZLUTCR", "name": "Tottenham Court Road"},
+                    {"id": "940GZZLUHBN", "name": "Holborn"},
+                    {"id": "940GZZLUCHL", "name": "Chancery Lane"},
+                    {"id": "940GZZLUSPU", "name": "St. Paul's"},
+                    {"id": "940GZZLUBNK", "name": "Bank"},
+                    {"id": "940GZZLULVT", "name": "Liverpool Street"},
+                    {"id": "940GZZLUBLG", "name": "Bethnal Green"},
+                    {"id": "940GZZLUMED", "name": "Mile End"},
+                    {"id": "940GZZLUSTD", "name": "Stratford"},
+                    {"id": "940GZZLULYN", "name": "Leyton"},
+                    {"id": "940GZZLULYS", "name": "Leytonstone"},
+                    {"id": "940GZZLUWSD", "name": "Wanstead"},
+                    {"id": "940GZZLURBG", "name": "Redbridge"},
+                    {"id": "940GZZLUGTH", "name": "Gants Hill"},
+                    {"id": "940GZZLUNBP", "name": "Newbury Park"},
+                    {"id": "940GZZLUBKE", "name": "Barkingside"},
+                    {"id": "940GZZLUFLP", "name": "Fairlop"},
+                    {"id": "940GZZLUHLT", "name": "Hainault"}
+                ],
+                [
+                    {"id": "940GZZLUEBY", "name": "Ealing Broadway"},
+                    {"id": "940GZZLUWTA", "name": "West Acton"},
+                    {"id": "940GZZLUNAN", "name": "North Acton"},
+                    {"id": "940GZZLUEAN", "name": "East Acton"},
+                    {"id": "940GZZLUWCY", "name": "White City"},
+                    {"id": "940GZZLUSBC", "name": "Shepherd's Bush (Central)"},
+                    {"id": "940GZZLUHPK", "name": "Holland Park"},
+                    {"id": "940GZZLUNHG", "name": "Notting Hill Gate"},
+                    {"id": "940GZZLUQWY", "name": "Queensway"},
+                    {"id": "940GZZLULGT", "name": "Lancaster Gate"},
+                    {"id": "940GZZLUMBA", "name": "Marble Arch"},
+                    {"id": "940GZZLUBND", "name": "Bond Street"},
+                    {"id": "940GZZLUOXC", "name": "Oxford Circus"},
+                    {"id": "940GZZLUTCR", "name": "Tottenham Court Road"},
+                    {"id": "940GZZLUHBN", "name": "Holborn"},
+                    {"id": "940GZZLUCHL", "name": "Chancery Lane"},
+                    {"id": "940GZZLUSPU", "name": "St. Paul's"},
+                    {"id": "940GZZLUBNK", "name": "Bank"},
+                    {"id": "940GZZLULVT", "name": "Liverpool Street"},
+                    {"id": "940GZZLUBLG", "name": "Bethnal Green"},
+                    {"id": "940GZZLUMED", "name": "Mile End"},
+                    {"id": "940GZZLUSTD", "name": "Stratford"},
+                    {"id": "940GZZLULYN", "name": "Leyton"},
+                    {"id": "940GZZLULYS", "name": "Leytonstone"},
+                    {"id": "940GZZLUSNB", "name": "Snaresbrook"},
+                    {"id": "940GZZLUSWF", "name": "South Woodford"},
+                    {"id": "940GZZLUWOF", "name": "Woodford"},
+                    {"id": "940GZZLUBKH", "name": "Buckhurst Hill"},
+                    {"id": "940GZZLULGN", "name": "Loughton"},
+                    {"id": "940GZZLUDBN", "name": "Debden"},
+                    {"id": "940GZZLUTHB", "name": "Theydon Bois"},
+                    {"id": "940GZZLUEPG", "name": "Epping"}
+                ],
+                [
+                    {"id": "940GZZLUEBY", "name": "Ealing Broadway"},
+                    {"id": "940GZZLUWTA", "name": "West Acton"},
+                    {"id": "940GZZLUNAN", "name": "North Acton"},
+                    {"id": "940GZZLUEAN", "name": "East Acton"},
+                    {"id": "940GZZLUWCY", "name": "White City"},
+                    {"id": "940GZZLUSBC", "name": "Shepherd's Bush (Central)"},
+                    {"id": "940GZZLUHPK", "name": "Holland Park"},
+                    {"id": "940GZZLUNHG", "name": "Notting Hill Gate"},
+                    {"id": "940GZZLUQWY", "name": "Queensway"},
+                    {"id": "940GZZLULGT", "name": "Lancaster Gate"},
+                    {"id": "940GZZLUMBA", "name": "Marble Arch"},
+                    {"id": "940GZZLUBND", "name": "Bond Street"},
+                    {"id": "940GZZLUOXC", "name": "Oxford Circus"},
+                    {"id": "940GZZLUTCR", "name": "Tottenham Court Road"},
+                    {"id": "940GZZLUHBN", "name": "Holborn"},
+                    {"id": "940GZZLUCHL", "name": "Chancery Lane"},
+                    {"id": "940GZZLUSPU", "name": "St. Paul's"},
+                    {"id": "940GZZLUBNK", "name": "Bank"},
+                    {"id": "940GZZLULVT", "name": "Liverpool Street"},
+                    {"id": "940GZZLUBLG", "name": "Bethnal Green"},
+                    {"id": "940GZZLUMED", "name": "Mile End"},
+                    {"id": "940GZZLUSTD", "name": "Stratford"},
+                    {"id": "940GZZLULYN", "name": "Leyton"},
+                    {"id": "940GZZLULYS", "name": "Leytonstone"},
+                    {"id": "940GZZLUWSD", "name": "Wanstead"},
+                    {"id": "940GZZLURBG", "name": "Redbridge"},
+                    {"id": "940GZZLUGTH", "name": "Gants Hill"},
+                    {"id": "940GZZLUNBP", "name": "Newbury Park"},
+                    {"id": "940GZZLUBKE", "name": "Barkingside"},
+                    {"id": "940GZZLUFLP", "name": "Fairlop"},
+                    {"id": "940GZZLUHLT", "name": "Hainault"}
+                ]
+            ];
+            
+            document.getElementById('inputData').value = JSON.stringify(centralLineData, null, 2);
+            generateMap();
+        }
+
+        function clearMap() {
+            document.getElementById('inputData').value = '';
+            document.getElementById('mapDisplay').innerHTML = '<svg id="tubeMapSVG" style="width: 100%; height: 100%;"><text x="50%" y="50%" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#6c757d">Enter your data above and click "Generate Map" to visualize your tube map</text></svg>';
+            document.getElementById('infoPanel').style.display = 'none';
+            // Reset orientation to horizontal
+            document.querySelector('input[name="orientation"][value="horizontal"]').checked = true;
+            mapOrientation = 'horizontal';
+        }
+
+        // Load example on page load
+        window.onload = function() {
+            loadExample();
+        };
+    </script>
+</body>
+</html>
