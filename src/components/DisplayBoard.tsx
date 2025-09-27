@@ -25,7 +25,7 @@ export function DisplayBoard({ board }: DisplayBoardProps) {
     const color = lineColors.find((l) => l.id === board.lineId)?.color ?? 'gray'
     // display-board w-full sm:max-w-144 sm:mx-auto border-4 border-pink-500
     return (
-        <div className="w-full sm:max-w-144 sm:mx-auto bg-black rounded-lg p-4 flex flex-col mb-4 border-4 border-pink-500">
+        <div className="w-full sm:max-w-144 sm:mx-auto bg-black rounded-lg p-4 flex flex-col mb-4 border-0 border-pink-500">
             {/** Header */}
             <div className="pb-4 flex">
                 <div
