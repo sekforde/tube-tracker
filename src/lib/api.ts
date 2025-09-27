@@ -1,6 +1,7 @@
 'use server'
 
 import fs from 'fs'
+import path from 'path'
 import { Station } from '@/types'
 
 const APP_KEY = process.env.APP_KEY ?? ''
@@ -31,7 +32,8 @@ function idToFile(id: string) {
 // }
 
 function loadJson(filename: string) {
-    const data = fs.readFileSync(`./src/data/${filename}.json`).toString()
+    const filePath = path.join(process.cwd(), "public/data", `${filename}.json`);    
+    const data = fs.readFileSync(filePath).toString()
     return JSON.parse(data)
 }
 
